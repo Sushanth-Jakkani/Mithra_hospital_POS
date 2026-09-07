@@ -11,6 +11,7 @@ export type UserRole =
   | 'CASHIER' 
   | 'INVENTORY_MANAGER' 
   | 'MANAGER'
+  | 'LAB_TECH'
 
 // Gender
 export type Gender = 'male' | 'female' | 'other'
@@ -363,6 +364,36 @@ export interface HospitalService {
   is_active: boolean
   created_at: string
   updated_at: string
+}
+
+export interface LabTest {
+  id: string
+  test_code: string
+  name: string
+  category: string
+  price: number
+  tax_rate: number
+  description?: string
+  turnaround_hours?: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface LabOrder {
+  id: string
+  order_number: string
+  patient_id: string
+  patient?: Patient
+  lab_test_id?: string
+  lab_test_name: string
+  category?: string
+  price: number
+  status: 'pending' | 'sample_collected' | 'completed' | 'cancelled'
+  technician_name?: string
+  results_notes?: string
+  billed: boolean
+  created_at: string
+  updated_at?: string
 }
 
 export interface Sale {

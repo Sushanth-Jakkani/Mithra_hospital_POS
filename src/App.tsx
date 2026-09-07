@@ -24,7 +24,8 @@ import ReceiptsPage from '@/features/receipts/ReceiptsPage'
 import ReportsPage from '@/features/reports/ReportsPage'
 import NotificationsPage from '@/features/notifications/NotificationsPage'
 import SettingsPage from '@/features/settings/SettingsPage'
-
+import AdminPage from '@/features/admin/AdminPage'
+import LabPage from '@/features/lab/LabPage'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -82,6 +83,11 @@ export default function App() {
               
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/*" element={<SettingsPage />} />
+              
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/*" element={<AdminPage />} />
+
+              <Route path="/lab" element={<LabPage />} />
             </Route>
             
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

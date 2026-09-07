@@ -64,6 +64,11 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'appointments.view',
     'staff.view',
   ],
+  LAB_TECH: [
+    'lab.view', 'lab.create', 'lab.edit',
+    'patients.view',
+    'dashboard.view',
+  ],
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -73,16 +78,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
+    // Get initial session safely
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        const session = data?.session ?? null
+        setSession(session)
+        setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        } else {
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        console.error('Error getting initial session:', err)
         setLoading(false)
-      }
-    })
+      })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(

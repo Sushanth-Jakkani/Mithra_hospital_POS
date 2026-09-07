@@ -56,9 +56,67 @@ export default function NewBillingPage() {
   const [completedReceipt, setCompletedReceipt] = useState<any>(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
 
+  // Lab Orders for selected patient
+  const [patientLabOrders, setPatientLabOrders] = useState<any[]>([])
+
   useEffect(() => {
     fetchInitialData()
   }, [])
+
+  // Update available lab orders whenever selectedPatient changes
+  useEffect(() => {
+    if (!selectedPatient) {
+      setPatientLabOrders([])
+      return
+    }
+    const saved = localStorage.getItem('mithra_lab_orders')
+    if (saved) {
+      try {
+        const allOrders = JSON.parse(saved)
+        const unbilled = allOrders.filter(
+          (o: any) =>
+            (o.patient_id === selectedPatient.id ||
+             o.patient_number === selectedPatient.patient_number ||
+             o.patient_name === selectedPatient.full_name) &&
+            !o.billed &&
+            o.status !== 'cancelled'
+        )
+        setPatientLabOrders(unbilled)
+      } catch {
+        setPatientLabOrders([])
+      }
+    }
+  }, [selectedPatient])
+
+  const handleAddLabOrderToBill = (labOrder: any) => {
+    const newItem: BillItem = {
+      id: `lab-${labOrder.id}-${Date.now()}`,
+      service_id: labOrder.id,
+      description: `[Lab Test] ${labOrder.lab_test_name}`,
+      quantity: 1,
+      unit_price: Number(labOrder.price),
+      discount: 0,
+      tax_rate: 0,
+      total: Number(labOrder.price),
+    }
+
+    const updated = [...items, newItem]
+    setItems(updated)
+    recalculatePaid(updated)
+
+    // Mark lab order as billed locally
+    const saved = localStorage.getItem('mithra_lab_orders')
+    if (saved) {
+      try {
+        const allOrders = JSON.parse(saved)
+        const updatedOrders = allOrders.map((o: any) => o.id === labOrder.id ? { ...o, billed: true } : o)
+        localStorage.setItem('mithra_lab_orders', JSON.stringify(updatedOrders))
+      } catch (e) {
+        console.error('Error updating lab order billed state', e)
+      }
+    }
+    setPatientLabOrders(prev => prev.filter(o => o.id !== labOrder.id))
+  }
 
   const fetchInitialData = async () => {
     try {
@@ -410,6 +468,56 @@ export default function NewBillingPage() {
               </div>
             )}
           </div>
+
+          {/* Pending Lab Tests for Patient Banner */}
+          {selectedPatient && patientLabOrders.length > 0 && (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-purple-600 text-white rounded-lg font-bold text-xs">🧪</span>
+                  <div>
+                    <h4 className="font-bold text-purple-900 text-xs uppercase tracking-wider">
+                      Pending Unbilled Lab Tests ({patientLabOrders.length})
+                    </h4>
+                    <p className="text-[11px] text-purple-700">
+                      Lab tests requested for {selectedPatient.full_name}. Add to bill in 1-click:
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    patientLabOrders.forEach(lo => handleAddLabOrderToBill(lo))
+                  }}
+                  className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-all shadow-sm"
+                >
+                  + Add All Lab Tests to Bill
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {patientLabOrders.map((lo) => (
+                  <div
+                    key={lo.id}
+                    className="bg-white border border-purple-100 p-3 rounded-lg flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-gray-900 block">{lo.lab_test_name}</span>
+                      <span className="text-[11px] text-purple-600 font-semibold">{formatCurrency(lo.price)}</span>
+                      <span className="text-[10px] text-gray-400 block">{lo.status.replace('_', ' ').toUpperCase()} • {lo.technician_name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddLabOrderToBill(lo)}
+                      className="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold rounded text-xs transition-colors"
+                    >
+                      + Add to Bill
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Service Line Items */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm space-y-3">

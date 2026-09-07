@@ -33,7 +33,8 @@ export default function LoginPage() {
               role: email.includes('admin') ? 'ADMIN' :
                     email.includes('doctor') ? 'DOCTOR' :
                     email.includes('pharm') ? 'PHARMACIST' :
-                    email.includes('cash') ? 'CASHIER' : 'RECEPTIONIST'
+                    email.includes('cash') ? 'CASHIER' :
+                    email.includes('lab') ? 'LAB_TECH' : 'RECEPTIONIST'
             }
           }
         })
@@ -49,7 +50,8 @@ export default function LoginPage() {
           const role = email.includes('admin') ? 'ADMIN' :
                        email.includes('doctor') ? 'DOCTOR' :
                        email.includes('pharm') ? 'PHARMACIST' :
-                       email.includes('cash') ? 'CASHIER' : 'RECEPTIONIST'
+                       email.includes('cash') ? 'CASHIER' :
+                       email.includes('lab') ? 'LAB_TECH' : 'RECEPTIONIST'
 
           await supabase.from('profiles').upsert({
             id: signUpData.user.id,
@@ -218,6 +220,19 @@ export default function LoginPage() {
                 <span className="font-bold text-teal-700">Receptionist</span>
                 <br />
                 <span className="text-[11px] text-gray-500">reception@mithra.hospital</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('lab@mithra.hospital')
+                  setPassword('Password@123')
+                }}
+                className="text-left bg-purple-50 hover:bg-purple-100 hover:border-purple-200 border border-transparent rounded-lg p-2 transition-all col-span-2"
+              >
+                <span className="font-bold text-purple-700">🧪 Lab Technician</span>
+                <br />
+                <span className="text-[11px] text-gray-500">lab@mithra.hospital</span>
               </button>
             </div>
           </div>

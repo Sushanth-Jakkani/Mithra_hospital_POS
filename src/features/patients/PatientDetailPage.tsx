@@ -22,7 +22,9 @@ import {
   Receipt,
   Stethoscope,
   Activity,
-  ShieldAlert
+  ShieldAlert,
+  FlaskConical,
+  TestTube
 } from 'lucide-react'
 
 export default function PatientDetailPage() {
@@ -31,7 +33,7 @@ export default function PatientDetailPage() {
   const [patient, setPatient] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'appointments' | 'consultations' | 'prescriptions' | 'pharmacy' | 'bills' | 'receipts' | 'timeline'
+    'overview' | 'appointments' | 'consultations' | 'prescriptions' | 'pharmacy' | 'bills' | 'receipts' | 'lab' | 'timeline'
   >('overview')
 
   // Related data
@@ -41,6 +43,7 @@ export default function PatientDetailPage() {
   const [sales, setSales] = useState<any[]>([])
   const [invoices, setInvoices] = useState<any[]>([])
   const [receipts, setReceipts] = useState<any[]>([])
+  const [labOrders, setLabOrders] = useState<any[]>([])
   const [timelineItems, setTimelineItems] = useState<any[]>([])
 
   useEffect(() => {
@@ -135,6 +138,19 @@ export default function PatientDetailPage() {
 
       setReceipts(rcts || [])
 
+      // 8. Fetch Lab Orders
+      let pLabOrders: any[] = []
+      const savedLabs = localStorage.getItem('mithra_lab_orders')
+      if (savedLabs) {
+        try {
+          const all = JSON.parse(savedLabs)
+          pLabOrders = all.filter((l: any) => l.patient_id === patientId || l.patient_number === pat.patient_number || l.patient_name === pat.full_name)
+        } catch {
+          pLabOrders = []
+        }
+      }
+      setLabOrders(pLabOrders)
+
       // Build unified timeline
       const events: any[] = []
 
@@ -144,6 +160,16 @@ export default function PatientDetailPage() {
         title: 'Patient Registered in Mithra Hospital',
         description: `Generated Patient ID ${pat.patient_number}`,
         type: 'info'
+      })
+
+      pLabOrders.forEach((l: any) => {
+        events.push({
+          id: `lab-${l.id}`,
+          time: l.created_at,
+          title: `Lab Test: ${l.lab_test_name} (${l.status.toUpperCase()})`,
+          description: `Fee: ${formatCurrency(l.price)} • Technician: ${l.technician_name || 'Lab Tech'}`,
+          type: l.status === 'completed' ? 'success' : 'warning'
+        })
       })
 
       ;(apts || []).forEach((a: any) => {
@@ -308,6 +334,7 @@ export default function PatientDetailPage() {
               { id: 'pharmacy', label: `Pharmacy (${sales.length})` },
               { id: 'bills', label: `Bills & Invoices (${invoices.length})` },
               { id: 'receipts', label: `Receipts (${receipts.length})` },
+              { id: 'lab', label: `Lab Tests (${labOrders.length})` },
               { id: 'timeline', label: 'Activity Timeline' },
             ].map(tab => (
               <button
@@ -553,7 +580,53 @@ export default function PatientDetailPage() {
             </div>
           )}
 
-          {/* 8. Activity Timeline Tab */}
+          {/* 8. Lab Tests Tab */}
+          {activeTab === 'lab' && (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden p-4">
+              {labOrders.length === 0 ? (
+                <div className="py-8 text-center text-xs text-gray-400">
+                  <FlaskConical className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  No lab tests ordered for this patient yet.
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {labOrders.map((lo: any) => (
+                    <div key={lo.id} className="py-3 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900 text-xs">{lo.lab_test_name}</span>
+                          <span className="text-[10px] font-mono bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
+                            {lo.order_number}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          Status: <strong className="uppercase text-purple-700">{lo.status.replace('_', ' ')}</strong> • Fee: <strong>{formatCurrency(lo.price)}</strong> • Tech: {lo.technician_name || 'Lab Tech'}
+                        </p>
+                        {lo.results_notes && (
+                          <p className="text-[11px] text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 mt-1">
+                            {lo.results_notes}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        {lo.billed ? (
+                          <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200">
+                            ✓ Included on Bill
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200">
+                            Unbilled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 9. Activity Timeline Tab */}
           {activeTab === 'timeline' && (
             <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm max-w-2xl">
               <Timeline items={timelineItems} />
