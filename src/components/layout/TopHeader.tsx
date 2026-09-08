@@ -1,5 +1,5 @@
 import { useAuth } from '@/features/auth/AuthProvider'
-import { Bell, Search, User } from 'lucide-react'
+import { Bell, Search, User, Download, Laptop, Smartphone } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -15,8 +15,22 @@ export default function TopHeader({ title, subtitle, actions }: TopHeaderProps) 
   const navigate = useNavigate()
   const [unreadCount, setUnreadCount] = useState(0)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
+    // Listen for PWA install prompt
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+    }
+
     // Fetch unread notification count
     const fetchUnread = async () => {
       if (!profile?.id) return
@@ -38,8 +52,24 @@ export default function TopHeader({ title, subtitle, actions }: TopHeaderProps) 
       }
     }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    }
   }, [profile?.id])
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === 'accepted') {
+        setIsInstalled(true)
+      }
+      setDeferredPrompt(null)
+    } else {
+      alert('To install Mithra Hospital POS on your Desktop / Mobile Home Screen:\n\n• In Chrome / Edge: Click the Install icon in the address bar (or Menu ➔ Install app).\n• On iPhone / Safari: Tap Share ➔ Add to Home Screen.\n• On Android: Tap Menu ➔ Add to Home Screen.')
+    }
+  }
 
   return (
     <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100">
@@ -53,6 +83,18 @@ export default function TopHeader({ title, subtitle, actions }: TopHeaderProps) 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
           {actions}
+
+          {/* PWA Install App Button */}
+          {!isInstalled && (
+            <button
+              onClick={handleInstallApp}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg transition-colors shadow-2xs"
+              title="Install Mithra POS App to Desktop / Home Screen"
+            >
+              <Download className="w-3.5 h-3.5 text-teal-600" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+          )}
 
           {/* Search */}
           <button
