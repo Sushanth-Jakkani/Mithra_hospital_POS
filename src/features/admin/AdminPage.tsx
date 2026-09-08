@@ -1,18 +1,21 @@
 import React, { useState } from 'react'
 import PageHeader from '@/components/shared/PageHeader'
 import CategoryManager from './CategoryManager'
+import ServiceManager from './ServiceManager'
 import LogoUploader from './LogoUploader'
 import {
   Layers,
+  Stethoscope,
   Image as ImageIcon,
   ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type AdminTab = 'categories' | 'logo'
+type AdminTab = 'categories' | 'services' | 'logo'
 
 const tabs: { key: AdminTab; label: string; icon: React.ElementType; description: string }[] = [
-  { key: 'categories', label: 'Categories', icon: Layers, description: 'Manage medicine categories' },
+  { key: 'categories', label: 'Medicine Categories', icon: Layers, description: 'Manage medicine categories' },
+  { key: 'services', label: 'Hospital Services', icon: Stethoscope, description: 'Manage hospital services & pricing' },
   { key: 'logo', label: 'Logo & Branding', icon: ImageIcon, description: 'Upload hospital logo' },
 ]
 
@@ -23,7 +26,7 @@ export default function AdminPage() {
     <div className="pb-24 lg:pb-12">
       <PageHeader
         title="Admin Panel"
-        subtitle="Manage categories, logo, and system settings"
+        subtitle="Manage medicine categories, hospital services & pricing, logo, and system settings"
         actions={
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded-lg">
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -34,7 +37,7 @@ export default function AdminPage() {
 
       <div className="px-4 sm:px-6 py-4 space-y-4">
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1 p-1 bg-gray-100/80 rounded-xl w-fit">
+        <div className="flex items-center gap-1 p-1 bg-gray-100/80 rounded-xl w-fit flex-wrap">
           {tabs.map((tab) => {
             const Icon = tab.icon
             const isActive = activeTab === tab.key
@@ -50,8 +53,7 @@ export default function AdminPage() {
                 )}
               >
                 <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                <span>{tab.label}</span>
               </button>
             )
           })}
@@ -60,6 +62,7 @@ export default function AdminPage() {
         {/* Tab Content */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 shadow-sm">
           {activeTab === 'categories' && <CategoryManager />}
+          {activeTab === 'services' && <ServiceManager />}
           {activeTab === 'logo' && <LogoUploader />}
         </div>
       </div>

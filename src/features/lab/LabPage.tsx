@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import PageHeader from '@/components/shared/PageHeader'
 import LoadingState from '@/components/shared/LoadingState'
-import StatusBadge from '@/components/shared/StatusBadge'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useAuth } from '@/features/auth/AuthProvider'
 import {
@@ -19,19 +18,23 @@ import {
   Edit2,
   X,
   CreditCard,
-  TestTube
+  TestTube,
+  Upload,
+  Paperclip,
+  ExternalLink,
+  Download,
 } from 'lucide-react'
 
 // Mock Seed Lab Tests if database is empty
 const INITIAL_LAB_TESTS = [
-  { id: 'lt-1', test_code: 'LAB-CBC', name: 'Complete Blood Count (CBC)', category: 'Hematology', price: 350, tax_rate: 0, turnaround_hours: 4, description: 'Measures RBC, WBC, Platelets, and Hemoglobin' },
-  { id: 'lt-2', test_code: 'LAB-LIP', name: 'Lipid Profile', category: 'Biochemistry', price: 650, tax_rate: 0, turnaround_hours: 12, description: 'Total Cholesterol, HDL, LDL, Triglycerides' },
-  { id: 'lt-3', test_code: 'LAB-HBA1C', name: 'HbA1c (Glycated Hemoglobin)', category: 'Biochemistry', price: 500, tax_rate: 0, turnaround_hours: 6, description: 'Average blood sugar level over the past 3 months' },
-  { id: 'lt-4', test_code: 'LAB-LFT', name: 'Liver Function Test (LFT)', category: 'Biochemistry', price: 750, tax_rate: 0, turnaround_hours: 8, description: 'Bilirubin, SGOT, SGPT, Alkaline Phosphatase' },
-  { id: 'lt-5', test_code: 'LAB-RFT', name: 'Renal Function Test (RFT)', category: 'Biochemistry', price: 700, tax_rate: 0, turnaround_hours: 8, description: 'Urea, Creatinine, Uric Acid' },
-  { id: 'lt-6', test_code: 'LAB-THY', name: 'Thyroid Profile (T3, T4, TSH)', category: 'Endocrinology', price: 850, tax_rate: 0, turnaround_hours: 24, description: 'Evaluates thyroid gland activity' },
-  { id: 'lt-7', test_code: 'LAB-CXR', name: 'Chest X-Ray (PA View)', category: 'Radiology', price: 450, tax_rate: 0, turnaround_hours: 2, description: 'Digital Chest X-Ray' },
-  { id: 'lt-8', test_code: 'LAB-ECG', name: 'ECG (12 Lead)', category: 'Cardiology', price: 300, tax_rate: 0, turnaround_hours: 1, description: 'Standard 12-lead Electrocardiogram' },
+  { id: 'lt-1', test_code: 'LAB-CBC', name: 'Complete Blood Count (CBC)', category: 'Hematology', price: 350, tax_rate: 0, turnaround_hours: 4, description: 'Measures RBC, WBC, Platelets, and Hemoglobin', is_active: true },
+  { id: 'lt-2', test_code: 'LAB-LIP', name: 'Lipid Profile', category: 'Biochemistry', price: 650, tax_rate: 0, turnaround_hours: 12, description: 'Total Cholesterol, HDL, LDL, Triglycerides', is_active: true },
+  { id: 'lt-3', test_code: 'LAB-HBA1C', name: 'HbA1c (Glycated Hemoglobin)', category: 'Biochemistry', price: 500, tax_rate: 0, turnaround_hours: 6, description: 'Average blood sugar level over the past 3 months', is_active: true },
+  { id: 'lt-4', test_code: 'LAB-LFT', name: 'Liver Function Test (LFT)', category: 'Biochemistry', price: 750, tax_rate: 0, turnaround_hours: 8, description: 'Bilirubin, SGOT, SGPT, Alkaline Phosphatase', is_active: true },
+  { id: 'lt-5', test_code: 'LAB-RFT', name: 'Renal Function Test (RFT)', category: 'Biochemistry', price: 700, tax_rate: 0, turnaround_hours: 8, description: 'Urea, Creatinine, Uric Acid', is_active: true },
+  { id: 'lt-6', test_code: 'LAB-THY', name: 'Thyroid Profile (T3, T4, TSH)', category: 'Endocrinology', price: 850, tax_rate: 0, turnaround_hours: 24, description: 'Evaluates thyroid gland activity', is_active: true },
+  { id: 'lt-7', test_code: 'LAB-CXR', name: 'Chest X-Ray (PA View)', category: 'Radiology', price: 450, tax_rate: 0, turnaround_hours: 2, description: 'Digital Chest X-Ray', is_active: true },
+  { id: 'lt-8', test_code: 'LAB-ECG', name: 'ECG (12 Lead)', category: 'Cardiology', price: 300, tax_rate: 0, turnaround_hours: 1, description: 'Standard 12-lead Electrocardiogram', is_active: true },
 ]
 
 // Mock Initial Lab Orders
@@ -86,17 +89,11 @@ const INITIAL_LAB_ORDERS = [
 export default function LabPage() {
   const { profile } = useAuth()
   const [activeTab, setActiveTab] = useState<'orders' | 'tests'>('orders')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Data state
-  const [orders, setOrders] = useState<any[]>(() => {
-    const saved = localStorage.getItem('mithra_lab_orders')
-    return saved ? JSON.parse(saved) : INITIAL_LAB_ORDERS
-  })
-  const [tests, setTests] = useState<any[]>(() => {
-    const saved = localStorage.getItem('mithra_lab_tests')
-    return saved ? JSON.parse(saved) : INITIAL_LAB_TESTS
-  })
+  const [orders, setOrders] = useState<any[]>([])
+  const [tests, setTests] = useState<any[]>([])
   const [patients, setPatients] = useState<any[]>([])
 
   // Search & Filter
@@ -107,11 +104,17 @@ export default function LabPage() {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [showTestModal, setShowTestModal] = useState(false)
   const [showResultModal, setShowResultModal] = useState<any>(null)
+  const [editingTest, setEditingTest] = useState<any>(null)
 
   // Form states
   const [selectedPatientId, setSelectedPatientId] = useState('')
   const [selectedTestId, setSelectedTestId] = useState('')
   const [orderNotes, setOrderNotes] = useState('')
+
+  // Report File Upload state in Result Modal
+  const [resultFile, setResultFile] = useState<File | null>(null)
+  const [uploadingReport, setUploadingReport] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // New Test Form
   const [testForm, setTestForm] = useState({
@@ -122,38 +125,83 @@ export default function LabPage() {
     description: ''
   })
 
-  // Save to LocalStorage helper
+  // Synchronize with Supabase Database
   useEffect(() => {
-    localStorage.setItem('mithra_lab_orders', JSON.stringify(orders))
-  }, [orders])
-
-  useEffect(() => {
-    localStorage.setItem('mithra_lab_tests', JSON.stringify(tests))
-  }, [tests])
-
-  // Fetch real patients from Supabase
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const { data } = await supabase.from('patients').select('id, full_name, patient_number, mobile')
-        if (data && data.length > 0) {
-          setPatients(data)
-        } else {
-          setPatients([
-            { id: 'pat-1', full_name: 'Rajesh Kumar', patient_number: 'PAT-2026-001', mobile: '9876543210' },
-            { id: 'pat-2', full_name: 'Priya Sharma', patient_number: 'PAT-2026-002', mobile: '9876543211' },
-            { id: 'pat-3', full_name: 'Anil Verma', patient_number: 'PAT-2026-003', mobile: '9876543212' },
-          ])
-        }
-      } catch (err) {
-        console.error('Error fetching patients:', err)
-      }
-    }
+    fetchLabData()
     fetchPatients()
   }, [])
 
-  // Add New Lab Order
-  const handleCreateOrder = (e: React.FormEvent) => {
+  const fetchLabData = async () => {
+    try {
+      setLoading(true)
+
+      // Fetch lab_tests
+      const { data: dbTests, error: testErr } = await supabase
+        .from('lab_tests')
+        .select('*')
+        .order('name')
+
+      if (!testErr && dbTests && dbTests.length > 0) {
+        setTests(dbTests)
+      } else {
+        const savedTests = localStorage.getItem('mithra_lab_tests')
+        setTests(savedTests ? JSON.parse(savedTests) : INITIAL_LAB_TESTS)
+      }
+
+      // Fetch lab_orders
+      const { data: dbOrders, error: orderErr } = await supabase
+        .from('lab_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!orderErr && dbOrders && dbOrders.length > 0) {
+        setOrders(dbOrders)
+      } else {
+        const savedOrders = localStorage.getItem('mithra_lab_orders')
+        setOrders(savedOrders ? JSON.parse(savedOrders) : INITIAL_LAB_ORDERS)
+      }
+
+    } catch (err) {
+      console.warn('Error fetching lab data from Supabase DB:', err)
+      const savedTests = localStorage.getItem('mithra_lab_tests')
+      const savedOrders = localStorage.getItem('mithra_lab_orders')
+      setTests(savedTests ? JSON.parse(savedTests) : INITIAL_LAB_TESTS)
+      setOrders(savedOrders ? JSON.parse(savedOrders) : INITIAL_LAB_ORDERS)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Fetch real patients from Supabase
+  const fetchPatients = async () => {
+    try {
+      const { data } = await supabase.from('patients').select('id, full_name, patient_number, mobile')
+      if (data && data.length > 0) {
+        setPatients(data)
+      } else {
+        setPatients([
+          { id: 'pat-1', full_name: 'Rajesh Kumar', patient_number: 'PAT-2026-001', mobile: '9876543210' },
+          { id: 'pat-2', full_name: 'Priya Sharma', patient_number: 'PAT-2026-002', mobile: '9876543211' },
+          { id: 'pat-3', full_name: 'Anil Verma', patient_number: 'PAT-2026-003', mobile: '9876543212' },
+        ])
+      }
+    } catch (err) {
+      console.error('Error fetching patients:', err)
+    }
+  }
+
+  const persistOrdersLocal = (newOrders: any[]) => {
+    setOrders(newOrders)
+    localStorage.setItem('mithra_lab_orders', JSON.stringify(newOrders))
+  }
+
+  const persistTestsLocal = (newTests: any[]) => {
+    setTests(newTests)
+    localStorage.setItem('mithra_lab_tests', JSON.stringify(newTests))
+  }
+
+  // --- Add New Lab Order (DB + Local) ---
+  const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault()
     const pat = patients.find(p => p.id === selectedPatientId)
     const test = tests.find(t => t.id === selectedTestId)
@@ -163,12 +211,14 @@ export default function LabPage() {
       return
     }
 
-    const newOrder = {
-      id: `lo-${Date.now()}`,
-      order_number: `LAB-2026-${String(orders.length + 1).padStart(3, '0')}`,
+    const orderNumber = `LAB-2026-${String(orders.length + 1).padStart(3, '0')}`
+
+    const newOrderPayload = {
+      order_number: orderNumber,
       patient_id: pat.id,
       patient_name: pat.full_name,
       patient_number: pat.patient_number,
+      lab_test_id: test.id,
       lab_test_name: test.name,
       category: test.category,
       price: Number(test.price),
@@ -176,40 +226,129 @@ export default function LabPage() {
       technician_name: profile?.full_name || 'Lab Technician',
       results_notes: orderNotes || 'Order created. Pending sample collection.',
       billed: false,
-      created_at: new Date().toISOString()
     }
 
-    setOrders([newOrder, ...orders])
+    try {
+      const { data: dbOrder, error: dbErr } = await supabase
+        .from('lab_orders')
+        .insert(newOrderPayload)
+        .select()
+        .single()
+
+      if (dbErr) {
+        console.warn('DB insert error for lab_order:', dbErr.message)
+        const fallbackOrder = {
+          id: `lo-${Date.now()}`,
+          ...newOrderPayload,
+          created_at: new Date().toISOString()
+        }
+        persistOrdersLocal([fallbackOrder, ...orders])
+      } else if (dbOrder) {
+        persistOrdersLocal([dbOrder, ...orders])
+      }
+    } catch (err) {
+      const fallbackOrder = {
+        id: `lo-${Date.now()}`,
+        ...newOrderPayload,
+        created_at: new Date().toISOString()
+      }
+      persistOrdersLocal([fallbackOrder, ...orders])
+    }
+
     setShowOrderModal(false)
     setSelectedPatientId('')
     setSelectedTestId('')
     setOrderNotes('')
   }
 
-  // Update Order Status
-  const handleUpdateStatus = (orderId: string, newStatus: string, notesUpdate?: string) => {
-    setOrders(orders.map(o => {
-      if (o.id === orderId) {
-        return {
-          ...o,
-          status: newStatus,
-          results_notes: notesUpdate !== undefined ? notesUpdate : o.results_notes,
-          technician_name: profile?.full_name || o.technician_name
+  // --- Update Order Status & Upload File ---
+  const handleUpdateStatus = async (orderId: string, newStatus: string, notesUpdate?: string, fileToUpload?: File | null) => {
+    try {
+      setUploadingReport(true)
+
+      let fileUrl = ''
+      let fileName = ''
+
+      if (fileToUpload) {
+        fileName = fileToUpload.name
+
+        // Try storage upload first
+        try {
+          const fileExt = fileName.split('.').pop()
+          const storagePath = `reports/lab-${orderId}-${Date.now()}.${fileExt}`
+
+          const { error: storageErr } = await supabase.storage
+            .from('lab_reports')
+            .upload(storagePath, fileToUpload, { upsert: true })
+
+          if (!storageErr) {
+            const { data } = supabase.storage.from('lab_reports').getPublicUrl(storagePath)
+            fileUrl = data.publicUrl
+          } else {
+            throw storageErr
+          }
+        } catch (stErr) {
+          console.warn('Lab report storage upload failed, using Data URL fallback:', stErr)
+          fileUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsDataURL(fileToUpload)
+          })
         }
       }
-      return o
-    }))
-    setShowResultModal(null)
+
+      const existing = orders.find(o => o.id === orderId)
+      const finalFileUrl = fileUrl || (existing ? existing.file_url : '')
+      const finalFileName = fileName || (existing ? existing.file_name : '')
+      const finalNotes = notesUpdate !== undefined ? notesUpdate : (existing ? existing.results_notes : '')
+
+      const updatePayload = {
+        status: newStatus,
+        results_notes: finalNotes,
+        technician_name: profile?.full_name || (existing ? existing.technician_name : 'Lab Technician'),
+        file_url: finalFileUrl,
+        file_name: finalFileName,
+        updated_at: new Date().toISOString(),
+      }
+
+      // Update in Supabase DB
+      const { error: dbErr } = await supabase
+        .from('lab_orders')
+        .update(updatePayload)
+        .eq('id', orderId)
+
+      if (dbErr) {
+        console.warn('DB update order error:', dbErr.message)
+      }
+
+      const updatedList = orders.map(o => {
+        if (o.id === orderId) {
+          return {
+            ...o,
+            ...updatePayload,
+          }
+        }
+        return o
+      })
+
+      persistOrdersLocal(updatedList)
+      setShowResultModal(null)
+      setResultFile(null)
+    } catch (err: any) {
+      alert('Error saving test results: ' + err.message)
+    } finally {
+      setUploadingReport(false)
+    }
   }
 
-  // Add New Test Catalog item
-  const handleCreateTest = (e: React.FormEvent) => {
+  // --- Add/Update Lab Test Catalog Item (DB + Local) ---
+  const handleSaveTest = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!testForm.name) return
 
-    const newTest = {
-      id: `lt-${Date.now()}`,
-      test_code: `LAB-${testForm.name.slice(0, 3).toUpperCase()}`,
+    const payload = {
+      test_code: editingTest ? editingTest.test_code : `LAB-${testForm.name.slice(0, 3).toUpperCase()}`,
       name: testForm.name,
       category: testForm.category,
       price: Number(testForm.price),
@@ -217,28 +356,95 @@ export default function LabPage() {
       turnaround_hours: Number(testForm.turnaround_hours),
       description: testForm.description,
       is_active: true,
-      created_at: new Date().toISOString()
     }
 
-    setTests([...tests, newTest])
+    try {
+      if (editingTest) {
+        const { error: dbErr } = await supabase
+          .from('lab_tests')
+          .update(payload)
+          .eq('id', editingTest.id)
+
+        if (dbErr) console.warn('DB edit lab test error:', dbErr.message)
+
+        const updated = tests.map(t => t.id === editingTest.id ? { ...t, ...payload } : t)
+        persistTestsLocal(updated)
+      } else {
+        const { data: inserted, error: dbErr } = await supabase
+          .from('lab_tests')
+          .insert(payload)
+          .select()
+          .single()
+
+        if (dbErr) {
+          console.warn('DB insert lab test error:', dbErr.message)
+          const fallback = { id: `lt-${Date.now()}`, ...payload, created_at: new Date().toISOString() }
+          persistTestsLocal([...tests, fallback])
+        } else if (inserted) {
+          persistTestsLocal([...tests, inserted])
+        }
+      }
+    } catch (err) {
+      const fallback = { id: `lt-${Date.now()}`, ...payload, created_at: new Date().toISOString() }
+      persistTestsLocal([...tests, fallback])
+    }
+
     setShowTestModal(false)
+    setEditingTest(null)
     setTestForm({ name: '', category: 'Biochemistry', price: 500, turnaround_hours: 6, description: '' })
   }
 
+  const openAddTestModal = () => {
+    setEditingTest(null)
+    setTestForm({ name: '', category: 'Biochemistry', price: 500, turnaround_hours: 6, description: '' })
+    setShowTestModal(true)
+  }
+
+  const openEditTestModal = (t: any) => {
+    setEditingTest(t)
+    setTestForm({
+      name: t.name,
+      category: t.category,
+      price: t.price,
+      turnaround_hours: t.turnaround_hours || 6,
+      description: t.description || ''
+    })
+    setShowTestModal(true)
+  }
+
   // Delete test
-  const handleDeleteTest = (id: string) => {
+  const handleDeleteTest = async (id: string) => {
     if (confirm('Are you sure you want to delete this lab test from catalog?')) {
-      setTests(tests.filter(t => t.id !== id))
+      try {
+        await supabase.from('lab_tests').delete().eq('id', id)
+      } catch (err) {
+        console.warn('DB delete error:', err)
+      }
+      const updated = tests.filter(t => t.id !== id)
+      persistTestsLocal(updated)
+    }
+  }
+
+  // Delete Order
+  const handleDeleteOrder = async (id: string) => {
+    if (confirm('Are you sure you want to remove this lab order record?')) {
+      try {
+        await supabase.from('lab_orders').delete().eq('id', id)
+      } catch (err) {
+        console.warn('DB delete error:', err)
+      }
+      const updated = orders.filter(o => o.id !== id)
+      persistOrdersLocal(updated)
     }
   }
 
   // Filtered Orders
   const filteredOrders = orders.filter(o => {
     const matchesSearch =
-      o.patient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.patient_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.lab_test_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.order_number.toLowerCase().includes(searchQuery.toLowerCase())
+      (o.patient_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.patient_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.lab_test_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (o.order_number || '').toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === 'all' || o.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -275,11 +481,15 @@ export default function LabPage() {
     }
   }
 
+  if (loading) {
+    return <LoadingState message="Loading laboratory catalog and patient test orders from database..." />
+  }
+
   return (
     <div className="pb-16 space-y-6">
       <PageHeader
         title="Laboratory Management"
-        subtitle="Manage patient diagnostic tests, laboratory orders, and clinical test catalog"
+        subtitle="Manage patient diagnostic tests, laboratory orders, report uploads, and clinical test catalog"
         actions={
           <div className="flex items-center gap-2">
             {activeTab === 'orders' ? (
@@ -292,7 +502,7 @@ export default function LabPage() {
               </button>
             ) : (
               <button
-                onClick={() => setShowTestModal(true)}
+                onClick={openAddTestModal}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm rounded-xl transition-all shadow-sm active:scale-95"
               >
                 <Plus className="w-4 h-4" />
@@ -412,10 +622,27 @@ export default function LabPage() {
                           <span>Date: {formatDateTime(order.created_at)}</span>
                         </div>
 
+                        {/* Results Notes */}
                         {order.results_notes && (
                           <div className="mt-2 bg-gray-50 p-2.5 rounded-lg border border-gray-100 text-xs text-gray-700">
                             <span className="font-semibold text-gray-900">Lab Notes / Results: </span>
                             {order.results_notes}
+                          </div>
+                        )}
+
+                        {/* File Attachment / Lab Report download */}
+                        {order.file_url && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <a
+                              href={order.file_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold transition-colors"
+                            >
+                              <Paperclip className="w-3.5 h-3.5" />
+                              <span>View Attached Lab Report ({order.file_name || 'Report.pdf'})</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
                           </div>
                         )}
                       </div>
@@ -433,11 +660,14 @@ export default function LabPage() {
 
                         {order.status !== 'completed' && order.status !== 'cancelled' && (
                           <button
-                            onClick={() => setShowResultModal(order)}
+                            onClick={() => {
+                              setShowResultModal(order)
+                              setResultFile(null)
+                            }}
                             className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-all shadow-sm flex items-center gap-1"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            Enter Results & Complete
+                            Upload Report & Complete
                           </button>
                         )}
 
@@ -449,6 +679,14 @@ export default function LabPage() {
                             Cancel
                           </button>
                         )}
+
+                        <button
+                          onClick={() => handleDeleteOrder(order.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          title="Delete Order Record"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -488,8 +726,16 @@ export default function LabPage() {
                     ⏱️ {test.turnaround_hours || 4} hrs TAT
                   </span>
                   <button
+                    onClick={() => openEditTestModal(test)}
+                    className="p-1.5 text-gray-400 hover:text-purple-600 rounded-lg hover:bg-purple-50 transition-colors"
+                    title="Edit Test Details"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleDeleteTest(test.id)}
                     className="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    title="Delete Test"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -580,21 +826,21 @@ export default function LabPage() {
         </div>
       )}
 
-      {/* MODAL 2: ADD TEST TO CATALOG */}
+      {/* MODAL 2: ADD / EDIT TEST IN CATALOG */}
       {showTestModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <TestTube className="w-5 h-5 text-purple-600" />
-                Add New Lab Test to Catalog
+                {editingTest ? 'Edit Lab Test Details' : 'Add New Lab Test to Catalog'}
               </h2>
               <button onClick={() => setShowTestModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateTest} className="space-y-4">
+            <form onSubmit={handleSaveTest} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">Test Name *</label>
                 <input
@@ -671,7 +917,7 @@ export default function LabPage() {
                   type="submit"
                   className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm rounded-xl transition-all shadow-sm"
                 >
-                  Save Test
+                  {editingTest ? 'Update Test' : 'Save Test'}
                 </button>
               </div>
             </form>
@@ -679,14 +925,14 @@ export default function LabPage() {
         </div>
       )}
 
-      {/* MODAL 3: ENTER TEST RESULTS */}
+      {/* MODAL 3: ENTER TEST RESULTS & UPLOAD REPORT FILE */}
       {showResultModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                Complete Lab Test & Enter Results
+                Complete Lab Test & Upload Report
               </h2>
               <button onClick={() => setShowResultModal(null)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
@@ -709,6 +955,42 @@ export default function LabPage() {
               />
             </div>
 
+            {/* File Upload Section for Lab Report Document */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Attach Lab Report / Document (PDF, Image)</label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-purple-200 bg-purple-50/50 hover:bg-purple-50 p-4 rounded-xl text-center cursor-pointer transition-colors"
+              >
+                <Upload className="w-6 h-6 text-purple-600 mx-auto mb-1" />
+                {resultFile ? (
+                  <p className="text-xs font-semibold text-purple-900">
+                    Selected: {resultFile.name} ({(resultFile.size / 1024).toFixed(0)} KB)
+                  </p>
+                ) : showResultModal.file_name ? (
+                  <p className="text-xs text-purple-800">
+                    Current Attachment: <strong className="font-semibold">{showResultModal.file_name}</strong> (Click to change)
+                  </p>
+                ) : (
+                  <div>
+                    <p className="text-xs font-medium text-purple-900">Click to upload scanned lab report or PDF</p>
+                    <p className="text-[10px] text-gray-400">PDF, PNG, JPG supported</p>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setResultFile(e.target.files[0])
+                    }
+                  }}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
               <button
                 type="button"
@@ -719,14 +1001,24 @@ export default function LabPage() {
               </button>
               <button
                 type="button"
+                disabled={uploadingReport}
                 onClick={() => {
                   const el = document.getElementById('resultNotesInput') as HTMLTextAreaElement
-                  handleUpdateStatus(showResultModal.id, 'completed', el ? el.value : 'Test completed.')
+                  handleUpdateStatus(showResultModal.id, 'completed', el ? el.value : 'Test completed.', resultFile)
                 }}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-xl transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-50"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                Mark Completed
+                {uploadingReport ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Uploading & Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Save & Complete Test</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

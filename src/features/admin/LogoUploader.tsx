@@ -112,33 +112,38 @@ export default function LogoUploader() {
       setUploading(true)
       setError(null)
 
-      const fileExt = selectedFile.name.split('.').pop()
-      const fileName = `hospital-logo-${Date.now()}.${fileExt}`
-      const filePath = `logos/${fileName}`
+      let publicUrl = ''
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, selectedFile, {
-          cacheControl: '3600',
-          upsert: true,
-        })
+      // Attempt upload to Supabase Storage bucket
+      try {
+        const fileExt = selectedFile.name.split('.').pop()
+        const fileName = `hospital-logo-${Date.now()}.${fileExt}`
 
-      if (uploadError) {
-        // Try creating bucket if it doesn't exist
-        if (uploadError.message.includes('not found') || uploadError.message.includes('Bucket')) {
-          setError('Storage bucket "logos" not found. Please create it in Supabase Dashboard → Storage.')
-          return
+        const { error: uploadError } = await supabase.storage
+          .from('logos')
+          .upload(fileName, selectedFile, {
+            cacheControl: '3600',
+            upsert: true,
+          })
+
+        if (!uploadError) {
+          const { data } = supabase.storage.from('logos').getPublicUrl(fileName)
+          publicUrl = data.publicUrl
+        } else {
+          throw uploadError
         }
-        throw uploadError
+      } catch (storageErr: any) {
+        console.warn('Storage bucket upload failed, using Data URL fallback:', storageErr?.message)
+        // Fallback to Data URL (base64) so logo upload works even without bucket setup
+        publicUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = (e) => reject(e)
+          reader.readAsDataURL(selectedFile)
+        })
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath)
-
-      // Update organization
+      // Update organization record in DB
       if (organizationId) {
         const { error: updateError } = await supabase
           .from('organizations')
@@ -161,7 +166,7 @@ export default function LogoUploader() {
       setCurrentLogoUrl(publicUrl)
       setSelectedFile(null)
       setPreviewUrl(null)
-      setSuccess('Logo uploaded successfully! It will appear in the sidebar and receipts.')
+      setSuccess('Logo updated and saved successfully! It will appear across navigation headers and printed receipts.')
 
       // Clear success after 5s
       setTimeout(() => setSuccess(null), 5000)
