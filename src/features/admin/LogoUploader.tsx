@@ -171,12 +171,15 @@ export default function LogoUploader() {
 
       // Always save to localStorage & settings as fallback
       localStorage.setItem('mithra_logo_url', publicUrl)
-      await supabase.from('settings').upsert({
-        key: 'hospital_logo',
-        category: 'general',
-        value: { url: publicUrl },
-        updated_at: new Date().toISOString(),
-      })
+      await supabase.from('settings').upsert(
+        {
+          key: 'hospital_logo',
+          category: 'general',
+          value: { url: publicUrl },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'key' }
+      )
 
       // Update organization record in DB if logo_url column exists
       if (organizationId) {

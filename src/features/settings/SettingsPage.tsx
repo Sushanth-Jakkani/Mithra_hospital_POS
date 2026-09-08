@@ -82,12 +82,15 @@ export default function SettingsPage() {
       setIsSaving(true)
       const { error } = await supabase
         .from('settings')
-        .upsert({
-          key: 'hospital_profile',
-          category: 'general',
-          value: profile,
-          updated_at: new Date().toISOString()
-        })
+        .upsert(
+          {
+            key: 'hospital_profile',
+            category: 'general',
+            value: profile,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'key' }
+        )
 
       if (error) throw error
       setSuccessMessage('Hospital profile settings updated successfully.')

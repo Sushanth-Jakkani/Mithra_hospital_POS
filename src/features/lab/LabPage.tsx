@@ -40,54 +40,9 @@ const INITIAL_LAB_TESTS = [
   { id: 'lt-8', test_code: 'LAB-ECG', name: 'ECG (12 Lead)', category: 'Cardiology', price: 300, tax_rate: 0, turnaround_hours: 1, description: 'Standard 12-lead Electrocardiogram', is_active: true },
 ]
 
-// Mock Initial Lab Orders
-const INITIAL_LAB_ORDERS = [
-  {
-    id: 'lo-101',
-    order_number: 'LAB-2026-001',
-    patient_id: 'pat-1',
-    patient_name: 'Rajesh Kumar',
-    patient_number: 'PAT-2026-001',
-    lab_test_name: 'Complete Blood Count (CBC)',
-    category: 'Hematology',
-    price: 350,
-    status: 'completed',
-    technician_name: 'Lab Tech Alex',
-    results_notes: 'Hemoglobin: 14.2 g/dL (Normal), WBC: 7,500 /uL, Platelets: 250,000 /uL',
-    billed: true,
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
-  },
-  {
-    id: 'lo-102',
-    order_number: 'LAB-2026-002',
-    patient_id: 'pat-2',
-    patient_name: 'Priya Sharma',
-    patient_number: 'PAT-2026-002',
-    lab_test_name: 'Lipid Profile',
-    category: 'Biochemistry',
-    price: 650,
-    status: 'sample_collected',
-    technician_name: 'Lab Tech Alex',
-    results_notes: 'Fasting blood sample collected at 08:30 AM. Processing in centrifuge.',
-    billed: false,
-    created_at: new Date(Date.now() - 3600000 * 5).toISOString()
-  },
-  {
-    id: 'lo-103',
-    order_number: 'LAB-2026-003',
-    patient_id: 'pat-1',
-    patient_name: 'Rajesh Kumar',
-    patient_number: 'PAT-2026-001',
-    lab_test_name: 'Thyroid Profile (T3, T4, TSH)',
-    category: 'Endocrinology',
-    price: 850,
-    status: 'pending',
-    technician_name: 'Lab Tech Alex',
-    results_notes: 'Patient requested test before evening doctor consultation.',
-    billed: false,
-    created_at: new Date(Date.now() - 3600000 * 1).toISOString()
-  }
-]
+// Initial Lab Orders (Empty for fresh deployment)
+const INITIAL_LAB_ORDERS: any[] = []
+
 
 export default function LabPage() {
   const navigate = useNavigate()
@@ -195,15 +150,7 @@ export default function LabPage() {
   const fetchPatients = async () => {
     try {
       const { data } = await supabase.from('patients').select('id, full_name, patient_number, mobile')
-      if (data && data.length > 0) {
-        setPatients(data)
-      } else {
-        setPatients([
-          { id: 'pat-1', full_name: 'Rajesh Kumar', patient_number: 'PAT-2026-001', mobile: '9876543210' },
-          { id: 'pat-2', full_name: 'Priya Sharma', patient_number: 'PAT-2026-002', mobile: '9876543211' },
-          { id: 'pat-3', full_name: 'Anil Verma', patient_number: 'PAT-2026-003', mobile: '9876543212' },
-        ])
-      }
+      setPatients(data || [])
     } catch (err) {
       console.error('Error fetching patients:', err)
     }
