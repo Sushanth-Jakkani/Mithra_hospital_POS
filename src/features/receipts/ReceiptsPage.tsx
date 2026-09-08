@@ -300,7 +300,6 @@ export default function ReceiptsPage() {
             {/* Printable Receipt Area */}
             <div className="py-4 text-xs font-mono bg-white text-gray-900 border border-gray-200 p-4 rounded-xl my-3 space-y-3">
               <div className="text-center pb-3 border-b border-dashed border-gray-300">
-<<<<<<< HEAD
                 {logoUrl && (
                   <div className="w-12 h-12 rounded-lg overflow-hidden mx-auto mb-2 bg-gray-50 border border-gray-100 flex items-center justify-center p-0.5">
                     <img src={logoUrl} alt="Hospital Logo" className="max-w-full max-h-full object-contain" />
@@ -309,11 +308,9 @@ export default function ReceiptsPage() {
                 <h2 className="font-bold text-sm uppercase">Mithra Superspeciality Hospital</h2>
                 <p className="text-[10px] text-gray-500">124 Healthcare Boulevard, Jubilee Hills, Hyderabad - 500033</p>
                 <p className="text-[10px] text-gray-500">Ph: +91 40 2345 6789 • GSTIN: 36AABCM1234F1Z8</p>
-=======
                 <h2 className="font-bold text-sm uppercase">{hospitalProfile.name}</h2>
                 <p className="text-[10px] text-gray-500">{hospitalProfile.address}</p>
                 <p className="text-[10px] text-gray-500">Ph: {hospitalProfile.phone} • GSTIN: {hospitalProfile.gstin}</p>
->>>>>>> dc0e85f (Updated Code fro Reciept)
                 <div className="mt-2">
                   <span className={`inline-block px-3 py-1 rounded text-xs font-bold ${
                     (selectedReceipt.print_count || 1) > 1 ? 'bg-amber-100 text-amber-900 border-2 border-amber-400 font-extrabold tracking-widest' : 'bg-gray-100 text-gray-800'
