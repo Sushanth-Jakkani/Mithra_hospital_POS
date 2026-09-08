@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useHospitalLogo } from '@/lib/useHospitalLogo'
 
 interface NavItem {
   label: string
@@ -84,26 +85,8 @@ export default function Sidebar({ onClose, isMobile }: SidebarProps) {
   const { profile, signOut, hasPermission, isRole } = useAuth()
   const location = useLocation()
   const [expandedItems, setExpandedItems] = useState<string[]>(['/inventory'])
-  const [logoUrl, setLogoUrl] = useState<string | null>(null)
-
-  // Fetch organization logo
-  useEffect(() => {
-    const fetchLogo = async () => {
-      try {
-        const { data } = await supabase
-          .from('organizations')
-          .select('logo_url')
-          .limit(1)
-          .single()
-        if (data?.logo_url) {
-          setLogoUrl(data.logo_url)
-        }
-      } catch {
-        // silently fail — will use fallback icon
-      }
-    }
-    fetchLogo()
-  }, [])
+  const [imgError, setImgError] = useState(false)
+  const logoUrl = useHospitalLogo()
 
   const toggleExpand = (path: string) => {
     setExpandedItems(prev =>
@@ -137,13 +120,13 @@ export default function Sidebar({ onClose, isMobile }: SidebarProps) {
       {/* Logo */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          {logoUrl ? (
+          {logoUrl && !imgError ? (
             <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50 border border-gray-100">
               <img
                 src={logoUrl}
                 alt="Hospital Logo"
                 className="w-full h-full object-contain"
-                onError={() => setLogoUrl(null)}
+                onError={() => setImgError(true)}
               />
             </div>
           ) : (

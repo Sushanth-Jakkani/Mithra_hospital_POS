@@ -26,6 +26,7 @@ import {
   Download,
   Printer,
 } from 'lucide-react'
+import { useHospitalLogo } from '@/lib/useHospitalLogo'
 
 // Mock Seed Lab Tests if database is empty
 const INITIAL_LAB_TESTS = [
@@ -90,6 +91,7 @@ const INITIAL_LAB_ORDERS = [
 
 export default function LabPage() {
   const navigate = useNavigate()
+  const logoUrl = useHospitalLogo()
   const [searchParams] = useSearchParams()
   const urlPatientId = searchParams.get('patient_id')
 
@@ -1088,6 +1090,11 @@ export default function LabPage() {
             <div className="p-6 border border-gray-200 rounded-xl bg-white space-y-6 text-gray-900 print:border-none print:p-0">
               {/* Header */}
               <div className="border-b-2 border-purple-600 pb-4 text-center">
+                {logoUrl && (
+                  <div className="w-14 h-14 rounded-xl overflow-hidden mx-auto mb-2 bg-gray-50 border border-purple-100 flex items-center justify-center p-0.5 shadow-xs">
+                    <img src={logoUrl} alt="Hospital Logo" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
                 <h1 className="text-xl font-extrabold text-purple-900 uppercase tracking-wide">Mithra Hospital & Diagnostic Center</h1>
                 <p className="text-xs text-gray-600 mt-1">Multi-Specialty Healthcare • Department of Clinical Pathology & Diagnostics</p>
                 <p className="text-[11px] text-gray-400">Phone: +91 98765 43210 • Email: lab@mithrahospital.com</p>

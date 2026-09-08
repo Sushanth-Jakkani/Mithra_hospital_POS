@@ -18,6 +18,8 @@ import {
   X
 } from 'lucide-react'
 
+import { useHospitalLogo } from '@/lib/useHospitalLogo'
+
 interface BillItem {
   id: string
   service_id?: string
@@ -31,6 +33,7 @@ interface BillItem {
 
 export default function NewBillingPage() {
   const navigate = useNavigate()
+  const logoUrl = useHospitalLogo()
   const [searchParams] = useSearchParams()
   const defaultPatientId = searchParams.get('patient_id')
 
@@ -776,6 +779,11 @@ export default function NewBillingPage() {
             {/* Printable Receipt Body (Thermal 80mm / A4 compliant) */}
             <div className="py-4 text-xs font-mono bg-white text-gray-900 border border-gray-200 p-4 rounded-xl my-3">
               <div className="text-center pb-3 border-b border-dashed border-gray-300">
+                {logoUrl && (
+                  <div className="w-12 h-12 rounded-lg overflow-hidden mx-auto mb-2 bg-gray-50 border border-gray-100 flex items-center justify-center p-0.5">
+                    <img src={logoUrl} alt="Hospital Logo" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
                 <h2 className="font-bold text-base tracking-wider uppercase">Mithra Superspeciality Hospital</h2>
                 <p className="text-[10px] text-gray-500">124 Healthcare Boulevard, Jubilee Hills, Hyd</p>
                 <p className="text-[10px] text-gray-500">Ph: +91 40 2345 6789 • GSTIN: 36AABCM1234F1Z8</p>

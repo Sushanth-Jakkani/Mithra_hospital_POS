@@ -204,6 +204,7 @@ export default function LogoUploader() {
       setCurrentLogoUrl(publicUrl)
       setSelectedFile(null)
       setPreviewUrl(null)
+      window.dispatchEvent(new Event('logo_updated'))
       setSuccess('Logo updated and saved successfully! It will appear across navigation headers and printed receipts.')
 
       // Clear success after 5s
@@ -232,6 +233,7 @@ export default function LogoUploader() {
       }
 
       setCurrentLogoUrl(null)
+      window.dispatchEvent(new Event('logo_updated'))
       setSuccess('Logo removed. Default icon will be shown.')
       setTimeout(() => setSuccess(null), 5000)
 

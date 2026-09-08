@@ -15,10 +15,12 @@ import {
   CheckCircle,
   Eye,
   AlertTriangle,
-  X
+  X,
 } from 'lucide-react'
+import { useHospitalLogo } from '@/lib/useHospitalLogo'
 
 export default function ReceiptsPage() {
+  const logoUrl = useHospitalLogo()
   const [receipts, setReceipts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
@@ -296,6 +298,11 @@ export default function ReceiptsPage() {
             {/* Printable Receipt Area */}
             <div className="py-4 text-xs font-mono bg-white text-gray-900 border border-gray-200 p-4 rounded-xl my-3 space-y-3">
               <div className="text-center pb-3 border-b border-dashed border-gray-300">
+                {logoUrl && (
+                  <div className="w-12 h-12 rounded-lg overflow-hidden mx-auto mb-2 bg-gray-50 border border-gray-100 flex items-center justify-center p-0.5">
+                    <img src={logoUrl} alt="Hospital Logo" className="max-w-full max-h-full object-contain" />
+                  </div>
+                )}
                 <h2 className="font-bold text-sm uppercase">Mithra Superspeciality Hospital</h2>
                 <p className="text-[10px] text-gray-500">124 Healthcare Boulevard, Jubilee Hills, Hyderabad - 500033</p>
                 <p className="text-[10px] text-gray-500">Ph: +91 40 2345 6789 • GSTIN: 36AABCM1234F1Z8</p>
