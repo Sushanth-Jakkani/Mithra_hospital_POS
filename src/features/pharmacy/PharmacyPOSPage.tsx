@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useHospitalProfile } from '@/lib/useHospitalProfile'
 import PageHeader from '@/components/shared/PageHeader'
 import LoadingState from '@/components/shared/LoadingState'
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -40,6 +41,7 @@ export default function PharmacyPOSPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const prescIdParam = searchParams.get('prescription_id')
+  const { profile: hospitalProfile } = useHospitalProfile()
 
   const [loading, setLoading] = useState(true)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -888,10 +890,10 @@ export default function PharmacyPOSPage() {
             {/* 80mm Thermal Receipt Layout */}
             <div className="py-3 text-[11px] font-mono bg-white text-gray-900 border border-gray-200 p-3 rounded-lg my-2">
               <div className="text-center pb-2 border-b border-dashed border-gray-300">
-                <h2 className="font-bold text-xs uppercase">Mithra Superspeciality Hospital</h2>
+                <h2 className="font-bold text-xs uppercase">{hospitalProfile.name}</h2>
                 <h3 className="font-bold text-[11px] uppercase text-teal-800">Pharmacy Counter</h3>
-                <p className="text-[9px] text-gray-500">124 Healthcare Blvd, Jubilee Hills, Hyd</p>
-                <p className="text-[9px] text-gray-500">GSTIN: 36AABCM1234F1Z8</p>
+                <p className="text-[9px] text-gray-500">{hospitalProfile.address}</p>
+                <p className="text-[9px] text-gray-500">GSTIN: {hospitalProfile.gstin}</p>
                 <div className="mt-1">
                   <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
                     (completedReceipt.print_count || 1) > 1 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-gray-100 text-gray-800'

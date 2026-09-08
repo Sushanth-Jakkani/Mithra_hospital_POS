@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useHospitalProfile } from '@/lib/useHospitalProfile'
 import PageHeader from '@/components/shared/PageHeader'
 import StatusBadge from '@/components/shared/StatusBadge'
 import LoadingState from '@/components/shared/LoadingState'
@@ -22,6 +23,7 @@ import {
 
 export default function PrescriptionsPage() {
   const navigate = useNavigate()
+  const { profile: hospitalProfile } = useHospitalProfile()
   const [prescriptions, setPrescriptions] = useState<any[]>([])
   const [patients, setPatients] = useState<any[]>([])
   const [doctors, setDoctors] = useState<any[]>([])
@@ -583,9 +585,9 @@ export default function PrescriptionsPage() {
               {/* Header */}
               <div className="flex justify-between items-start pb-4 border-b-2 border-teal-600">
                 <div>
-                  <h2 className="text-base font-bold text-teal-800 uppercase">Mithra Superspeciality Hospital</h2>
-                  <p className="text-xs text-gray-500">124 Healthcare Boulevard, Jubilee Hills, Hyderabad</p>
-                  <p className="text-xs text-gray-500">Ph: +91 40 2345 6789 • Emergency: +91 40 2345 9999</p>
+                  <h2 className="text-base font-bold text-teal-800 uppercase">{hospitalProfile.name}</h2>
+                  <p className="text-xs text-gray-500">{hospitalProfile.address}</p>
+                  <p className="text-xs text-gray-500">Ph: {hospitalProfile.phone} • Emergency: {hospitalProfile.emergency_phone}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-xs text-gray-900">{viewPrescription.doctor?.full_name}</p>
