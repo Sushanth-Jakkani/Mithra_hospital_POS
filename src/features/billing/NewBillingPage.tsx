@@ -787,12 +787,11 @@ export default function NewBillingPage() {
                     <img src={logoUrl} alt="Hospital Logo" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
-                <h2 className="font-bold text-base tracking-wider uppercase">Mithra Superspeciality Hospital</h2>
-                <p className="text-[10px] text-gray-500">124 Healthcare Boulevard, Jubilee Hills, Hyd</p>
-                <p className="text-[10px] text-gray-500">Ph: +91 40 2345 6789 • GSTIN: 36AABCM1234F1Z8</p>
                 <h2 className="font-bold text-base tracking-wider uppercase">{hospitalProfile.name}</h2>
                 <p className="text-[10px] text-gray-500">{hospitalProfile.address}</p>
-                <p className="text-[10px] text-gray-500">Ph: {hospitalProfile.phone} • GSTIN: {hospitalProfile.gstin}</p>
+                <p className="text-[10px] text-gray-500">
+                  Ph: {hospitalProfile.phone} • GSTIN: {hospitalProfile.gstin}
+                </p>
                 <div className="mt-1">
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                     (completedReceipt.print_count || 1) > 1 ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-gray-100 text-gray-800'
