@@ -305,9 +305,6 @@ export default function ReceiptsPage() {
                     <img src={logoUrl} alt="Hospital Logo" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
-                <h2 className="font-bold text-sm uppercase">Mithra Superspeciality Hospital</h2>
-                <p className="text-[10px] text-gray-500">124 Healthcare Boulevard, Jubilee Hills, Hyderabad - 500033</p>
-                <p className="text-[10px] text-gray-500">Ph: +91 40 2345 6789 • GSTIN: 36AABCM1234F1Z8</p>
                 <h2 className="font-bold text-sm uppercase">{hospitalProfile.name}</h2>
                 <p className="text-[10px] text-gray-500">{hospitalProfile.address}</p>
                 <p className="text-[10px] text-gray-500">Ph: {hospitalProfile.phone} • GSTIN: {hospitalProfile.gstin}</p>
@@ -340,8 +337,23 @@ export default function ReceiptsPage() {
                   <span>Amount</span>
                 </div>
                 {selectedReceipt.invoice?.items?.length > 0 ? (
-                  selectedReceipt.invoice.items.map((item: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-[11px]">
+                  Object.values(
+                    selectedReceipt.invoice.items.reduce((groups: Record<string, { description: string; quantity: number; total_amount: number }>, item: any) => {
+                      const key = (item.description || 'Item').trim().toLowerCase()
+                      if (!groups[key]) {
+                        groups[key] = {
+                          description: item.description || 'Item',
+                          quantity: Number(item.quantity) || 0,
+                          total_amount: Number(item.total_amount) || 0,
+                        }
+                      } else {
+                        groups[key].quantity += Number(item.quantity) || 0
+                        groups[key].total_amount += Number(item.total_amount) || 0
+                      }
+                      return groups
+                    }, {})
+                  ).map((item: any) => (
+                    <div key={item.description} className="flex justify-between text-[11px]">
                       <span>{item.description} (x{item.quantity})</span>
                       <span>{formatCurrency(item.total_amount)}</span>
                     </div>
