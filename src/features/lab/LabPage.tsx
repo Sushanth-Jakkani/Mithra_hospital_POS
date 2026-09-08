@@ -128,11 +128,13 @@ export default function LabPage() {
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (!orderErr && dbOrders && dbOrders.length > 0) {
+      if (!orderErr && dbOrders) {
         setOrders(dbOrders)
       } else {
         const savedOrders = localStorage.getItem('mithra_lab_orders')
-        setOrders(savedOrders ? JSON.parse(savedOrders) : INITIAL_LAB_ORDERS)
+        const parsed = savedOrders ? JSON.parse(savedOrders) : []
+        const cleanOrders = parsed.filter((o: any) => !o.id?.startsWith('lo-') && o.patient_number !== 'PAT-2026-001' && o.patient_number !== 'PAT-2026-002')
+        setOrders(cleanOrders)
       }
 
     } catch (err) {
@@ -140,7 +142,9 @@ export default function LabPage() {
       const savedTests = localStorage.getItem('mithra_lab_tests')
       const savedOrders = localStorage.getItem('mithra_lab_orders')
       setTests(savedTests ? JSON.parse(savedTests) : INITIAL_LAB_TESTS)
-      setOrders(savedOrders ? JSON.parse(savedOrders) : INITIAL_LAB_ORDERS)
+      const parsed = savedOrders ? JSON.parse(savedOrders) : []
+      const cleanOrders = parsed.filter((o: any) => !o.id?.startsWith('lo-') && o.patient_number !== 'PAT-2026-001' && o.patient_number !== 'PAT-2026-002')
+      setOrders(cleanOrders)
     } finally {
       setLoading(false)
     }

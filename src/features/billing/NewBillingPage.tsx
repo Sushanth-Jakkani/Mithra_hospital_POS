@@ -97,6 +97,7 @@ export default function NewBillingPage() {
           const allOrders = JSON.parse(saved)
           localUnbilled = allOrders.filter(
             (o: any) =>
+              !o.id?.startsWith('lo-') &&
               (o.patient_id === selectedPatient.id ||
                o.patient_number === selectedPatient.patient_number ||
                o.patient_name === selectedPatient.full_name) &&

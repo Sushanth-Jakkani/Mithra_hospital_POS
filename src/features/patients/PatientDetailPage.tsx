@@ -158,7 +158,7 @@ export default function PatientDetailPage() {
       if (savedLabs) {
         try {
           const allLocal = JSON.parse(savedLabs)
-          const localMatching = allLocal.filter((l: any) => l.patient_id === patientId || l.patient_number === pat.patient_number || l.patient_name === pat.full_name)
+          const localMatching = allLocal.filter((l: any) => !l.id?.startsWith('lo-') && (l.patient_id === patientId || l.patient_number === pat.patient_number || l.patient_name === pat.full_name))
           const map = new Map()
           pLabOrders.forEach(l => map.set(l.id, l))
           localMatching.forEach((l: any) => {
