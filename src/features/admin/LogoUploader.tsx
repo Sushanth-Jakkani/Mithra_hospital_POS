@@ -33,22 +33,48 @@ export default function LogoUploader() {
   const fetchOrganization = async () => {
     try {
       setLoading(true)
+
+      // Try selecting logo_url from organizations
       const { data, error } = await supabase
         .from('organizations')
         .select('id, name, logo_url')
         .limit(1)
-        .single()
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching organization:', error)
-      }
-
-      if (data) {
+      if (!error && data) {
         setOrganizationId(data.id)
-        setCurrentLogoUrl(data.logo_url || null)
+        if (data.logo_url) {
+          setCurrentLogoUrl(data.logo_url)
+          return
+        }
       }
+
+      // If logo_url column does not exist or is null, try settings table or localStorage
+      const { data: orgSimple } = await supabase
+        .from('organizations')
+        .select('id, name')
+        .limit(1)
+        .maybeSingle()
+
+      if (orgSimple) setOrganizationId(orgSimple.id)
+
+      const { data: settingData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'hospital_logo')
+        .maybeSingle()
+
+      if (settingData?.value?.url) {
+        setCurrentLogoUrl(settingData.value.url)
+      } else {
+        const localLogo = localStorage.getItem('mithra_logo_url')
+        if (localLogo) setCurrentLogoUrl(localLogo)
+      }
+
     } catch (err) {
-      console.error('Error:', err)
+      console.warn('Error fetching organization/logo:', err)
+      const localLogo = localStorage.getItem('mithra_logo_url')
+      if (localLogo) setCurrentLogoUrl(localLogo)
     } finally {
       setLoading(false)
     }
@@ -143,24 +169,36 @@ export default function LogoUploader() {
         })
       }
 
-      // Update organization record in DB
+      // Always save to localStorage & settings as fallback
+      localStorage.setItem('mithra_logo_url', publicUrl)
+      await supabase.from('settings').upsert({
+        key: 'hospital_logo',
+        category: 'general',
+        value: { url: publicUrl },
+        updated_at: new Date().toISOString(),
+      })
+
+      // Update organization record in DB if logo_url column exists
       if (organizationId) {
         const { error: updateError } = await supabase
           .from('organizations')
           .update({ logo_url: publicUrl })
           .eq('id', organizationId)
 
-        if (updateError) throw updateError
+        if (updateError) {
+          console.warn('Organization logo_url column update notice:', updateError.message)
+        }
       } else {
-        // Create org if none exists
         const { data: newOrg, error: createError } = await supabase
           .from('organizations')
-          .insert({ name: 'Mithra Hospital', logo_url: publicUrl })
+          .insert({ name: 'Mithra Hospital' })
           .select()
           .single()
 
-        if (createError) throw createError
-        setOrganizationId(newOrg.id)
+        if (!createError && newOrg) {
+          setOrganizationId(newOrg.id)
+          await supabase.from('organizations').update({ logo_url: publicUrl }).eq('id', newOrg.id)
+        }
       }
 
       setCurrentLogoUrl(publicUrl)
@@ -179,17 +217,19 @@ export default function LogoUploader() {
   }
 
   const handleRemoveLogo = async () => {
-    if (!organizationId) return
     try {
       setRemoving(true)
       setError(null)
 
-      const { error: updateError } = await supabase
-        .from('organizations')
-        .update({ logo_url: null })
-        .eq('id', organizationId)
+      localStorage.removeItem('mithra_logo_url')
+      await supabase.from('settings').delete().eq('key', 'hospital_logo')
 
-      if (updateError) throw updateError
+      if (organizationId) {
+        await supabase
+          .from('organizations')
+          .update({ logo_url: null })
+          .eq('id', organizationId)
+      }
 
       setCurrentLogoUrl(null)
       setSuccess('Logo removed. Default icon will be shown.')

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import PageHeader from '@/components/shared/PageHeader'
 import LoadingState from '@/components/shared/LoadingState'
@@ -23,6 +24,7 @@ import {
   Paperclip,
   ExternalLink,
   Download,
+  Printer,
 } from 'lucide-react'
 
 // Mock Seed Lab Tests if database is empty
@@ -87,6 +89,10 @@ const INITIAL_LAB_ORDERS = [
 ]
 
 export default function LabPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const urlPatientId = searchParams.get('patient_id')
+
   const { profile } = useAuth()
   const [activeTab, setActiveTab] = useState<'orders' | 'tests'>('orders')
   const [loading, setLoading] = useState(true)
@@ -104,6 +110,7 @@ export default function LabPage() {
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [showTestModal, setShowTestModal] = useState(false)
   const [showResultModal, setShowResultModal] = useState<any>(null)
+  const [showPrintModal, setShowPrintModal] = useState<any>(null)
   const [editingTest, setEditingTest] = useState<any>(null)
 
   // Form states
@@ -130,6 +137,16 @@ export default function LabPage() {
     fetchLabData()
     fetchPatients()
   }, [])
+
+  useEffect(() => {
+    if (urlPatientId && patients.length > 0) {
+      const match = patients.find(p => p.id === urlPatientId)
+      if (match) {
+        setSelectedPatientId(match.id)
+        setShowOrderModal(true)
+      }
+    }
+  }, [urlPatientId, patients])
 
   const fetchLabData = async () => {
     try {
@@ -671,6 +688,26 @@ export default function LabPage() {
                           </button>
                         )}
 
+                        <button
+                          onClick={() => setShowPrintModal(order)}
+                          className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
+                          title="Print Official Diagnostic Report"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Report
+                        </button>
+
+                        {!order.billed && order.status !== 'cancelled' && (
+                          <button
+                            onClick={() => navigate(`/billing/new?patient_id=${order.patient_id}`)}
+                            className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-medium transition-all flex items-center gap-1"
+                            title="Bill this Lab Test"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            Bill Now
+                          </button>
+                        )}
+
                         {order.status !== 'cancelled' && order.status !== 'completed' && (
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'cancelled', 'Order cancelled by lab technician.')}
@@ -1019,6 +1056,115 @@ export default function LabPage() {
                     <span>Save & Complete Test</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: OFFICIAL PRINTABLE DIAGNOSTIC LAB REPORT */}
+      {showPrintModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 print:hidden">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <Printer className="w-5 h-5 text-purple-600" />
+                Official Laboratory Report Preview
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" /> Print Report
+                </button>
+                <button onClick={() => setShowPrintModal(null)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Report Layout */}
+            <div className="p-6 border border-gray-200 rounded-xl bg-white space-y-6 text-gray-900 print:border-none print:p-0">
+              {/* Header */}
+              <div className="border-b-2 border-purple-600 pb-4 text-center">
+                <h1 className="text-xl font-extrabold text-purple-900 uppercase tracking-wide">Mithra Hospital & Diagnostic Center</h1>
+                <p className="text-xs text-gray-600 mt-1">Multi-Specialty Healthcare • Department of Clinical Pathology & Diagnostics</p>
+                <p className="text-[11px] text-gray-400">Phone: +91 98765 43210 • Email: lab@mithrahospital.com</p>
+              </div>
+
+              {/* Title Badge */}
+              <div className="bg-purple-50 text-purple-900 font-bold text-xs uppercase px-3 py-1.5 rounded-md text-center border border-purple-200">
+                Diagnostic Laboratory Report — {showPrintModal.category || 'Clinical Pathology'}
+              </div>
+
+              {/* Patient & Report Metadata Grid */}
+              <div className="grid grid-cols-2 gap-4 text-xs bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <div className="space-y-1">
+                  <p><span className="text-gray-500">Patient Name:</span> <strong>{showPrintModal.patient_name}</strong></p>
+                  <p><span className="text-gray-500">Patient ID:</span> <strong className="font-mono">{showPrintModal.patient_number || 'N/A'}</strong></p>
+                  <p><span className="text-gray-500">Referred By:</span> <strong>Staff / Outpatient Dept</strong></p>
+                </div>
+                <div className="space-y-1">
+                  <p><span className="text-gray-500">Order Number:</span> <strong className="font-mono text-purple-700">{showPrintModal.order_number}</strong></p>
+                  <p><span className="text-gray-500">Order Date:</span> <strong>{formatDateTime(showPrintModal.created_at)}</strong></p>
+                  <p><span className="text-gray-500">Status:</span> <strong className="uppercase text-emerald-700">{showPrintModal.status}</strong></p>
+                </div>
+              </div>
+
+              {/* Diagnostic Test Details Table */}
+              <div>
+                <table className="w-full text-left text-xs border border-gray-200">
+                  <thead className="bg-purple-100 text-purple-950 font-bold uppercase text-[11px]">
+                    <tr>
+                      <th className="p-2.5 border-b border-gray-200">Test Name</th>
+                      <th className="p-2.5 border-b border-gray-200">Category</th>
+                      <th className="p-2.5 border-b border-gray-200 text-right">Standard Fee</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="p-2.5 font-bold text-gray-900">{showPrintModal.lab_test_name}</td>
+                      <td className="p-2.5 text-gray-600">{showPrintModal.category || 'General'}</td>
+                      <td className="p-2.5 text-right font-semibold text-purple-800">{formatCurrency(showPrintModal.price)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Findings & Notes */}
+              <div className="space-y-1">
+                <h4 className="text-xs font-bold text-gray-900 uppercase">Clinical Observations / Findings Notes:</h4>
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs font-mono text-gray-800 whitespace-pre-wrap">
+                  {showPrintModal.results_notes || 'No preliminary notes recorded for this test order.'}
+                </div>
+              </div>
+
+              {showPrintModal.file_url && (
+                <div className="text-xs text-purple-900 bg-purple-50 p-3 rounded-xl border border-purple-200">
+                  📎 <strong>Attached Digital Report:</strong> {showPrintModal.file_name || 'Report.pdf'}
+                </div>
+              )}
+
+              {/* Signatures */}
+              <div className="pt-8 flex items-center justify-between text-xs text-gray-600 border-t border-gray-200">
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">{showPrintModal.technician_name || 'Lab Technician'}</p>
+                  <p className="text-[10px] text-gray-400">Medical Technologist / Operator</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-bold text-gray-900">Dr. S. Ramanathan, MD</p>
+                  <p className="text-[10px] text-gray-400">Chief Consultant Pathologist</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2 print:hidden">
+              <button
+                onClick={() => setShowPrintModal(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl"
+              >
+                Close Preview
               </button>
             </div>
           </div>

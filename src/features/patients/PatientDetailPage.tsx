@@ -138,15 +138,35 @@ export default function PatientDetailPage() {
 
       setReceipts(rcts || [])
 
-      // 8. Fetch Lab Orders
+      // 8. Fetch Lab Orders from DB & Local storage
       let pLabOrders: any[] = []
+      try {
+        const { data: dbLabs } = await supabase
+          .from('lab_orders')
+          .select('*')
+          .or(`patient_id.eq.${patientId},patient_number.eq.${pat.patient_number}`)
+          .order('created_at', { ascending: false })
+
+        if (dbLabs && dbLabs.length > 0) {
+          pLabOrders = dbLabs
+        }
+      } catch (err) {
+        console.warn('Could not fetch lab orders from DB for patient:', err)
+      }
+
       const savedLabs = localStorage.getItem('mithra_lab_orders')
       if (savedLabs) {
         try {
-          const all = JSON.parse(savedLabs)
-          pLabOrders = all.filter((l: any) => l.patient_id === patientId || l.patient_number === pat.patient_number || l.patient_name === pat.full_name)
+          const allLocal = JSON.parse(savedLabs)
+          const localMatching = allLocal.filter((l: any) => l.patient_id === patientId || l.patient_number === pat.patient_number || l.patient_name === pat.full_name)
+          const map = new Map()
+          pLabOrders.forEach(l => map.set(l.id, l))
+          localMatching.forEach((l: any) => {
+            if (!map.has(l.id)) map.set(l.id, l)
+          })
+          pLabOrders = Array.from(map.values())
         } catch {
-          pLabOrders = []
+          // ignore error
         }
       }
       setLabOrders(pLabOrders)
@@ -582,7 +602,20 @@ export default function PatientDetailPage() {
 
           {/* 8. Lab Tests Tab */}
           {activeTab === 'lab' && (
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden p-4">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden p-4 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                  <FlaskConical className="w-4 h-4 text-purple-600" />
+                  Patient Lab Diagnostic History
+                </h3>
+                <button
+                  onClick={() => navigate('/lab')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition-all shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Order Diagnostic Test
+                </button>
+              </div>
+
               {labOrders.length === 0 ? (
                 <div className="py-8 text-center text-xs text-gray-400">
                   <FlaskConical className="w-8 h-8 text-gray-300 mx-auto mb-2" />
@@ -591,11 +624,11 @@ export default function PatientDetailPage() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {labOrders.map((lo: any) => (
-                    <div key={lo.id} className="py-3 flex items-center justify-between">
+                    <div key={lo.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-gray-900 text-xs">{lo.lab_test_name}</span>
-                          <span className="text-[10px] font-mono bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-mono bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-200">
                             {lo.order_number}
                           </span>
                         </div>
@@ -604,14 +637,24 @@ export default function PatientDetailPage() {
                         </p>
                         {lo.results_notes && (
                           <p className="text-[11px] text-gray-600 bg-gray-50 p-2 rounded border border-gray-100 mt-1">
-                            {lo.results_notes}
+                            <strong>Findings:</strong> {lo.results_notes}
                           </p>
                         )}
+                        {lo.file_url && (
+                          <a
+                            href={lo.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] text-purple-700 hover:underline font-semibold mt-1"
+                          >
+                            📎 View Attached Report ({lo.file_name || 'Report.pdf'})
+                          </a>
+                        )}
                       </div>
-                      <div>
+                      <div className="flex items-center gap-2">
                         {lo.billed ? (
                           <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200">
-                            ✓ Included on Bill
+                            ✓ Billed
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200">

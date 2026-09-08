@@ -69,26 +69,56 @@ export default function NewBillingPage() {
       setPatientLabOrders([])
       return
     }
-    const saved = localStorage.getItem('mithra_lab_orders')
-    if (saved) {
+
+    const fetchPatientLabs = async () => {
+      let dbUnbilled: any[] = []
       try {
-        const allOrders = JSON.parse(saved)
-        const unbilled = allOrders.filter(
-          (o: any) =>
-            (o.patient_id === selectedPatient.id ||
-             o.patient_number === selectedPatient.patient_number ||
-             o.patient_name === selectedPatient.full_name) &&
-            !o.billed &&
-            o.status !== 'cancelled'
-        )
-        setPatientLabOrders(unbilled)
-      } catch {
-        setPatientLabOrders([])
+        const { data } = await supabase
+          .from('lab_orders')
+          .select('*')
+          .or(`patient_id.eq.${selectedPatient.id},patient_number.eq.${selectedPatient.patient_number}`)
+          .eq('billed', false)
+          .neq('status', 'cancelled')
+
+        if (data && data.length > 0) {
+          dbUnbilled = data
+        }
+      } catch (err) {
+        console.warn('Could not fetch lab orders from DB:', err)
       }
+
+      const saved = localStorage.getItem('mithra_lab_orders')
+      let localUnbilled: any[] = []
+      if (saved) {
+        try {
+          const allOrders = JSON.parse(saved)
+          localUnbilled = allOrders.filter(
+            (o: any) =>
+              (o.patient_id === selectedPatient.id ||
+               o.patient_number === selectedPatient.patient_number ||
+               o.patient_name === selectedPatient.full_name) &&
+              !o.billed &&
+              o.status !== 'cancelled'
+          )
+        } catch {
+          localUnbilled = []
+        }
+      }
+
+      // Merge unique lab orders by ID
+      const mergedMap = new Map()
+      dbUnbilled.forEach(o => mergedMap.set(o.id, o))
+      localUnbilled.forEach(o => {
+        if (!mergedMap.has(o.id)) mergedMap.set(o.id, o)
+      })
+
+      setPatientLabOrders(Array.from(mergedMap.values()))
     }
+
+    fetchPatientLabs()
   }, [selectedPatient])
 
-  const handleAddLabOrderToBill = (labOrder: any) => {
+  const handleAddLabOrderToBill = async (labOrder: any) => {
     const newItem: BillItem = {
       id: `lab-${labOrder.id}-${Date.now()}`,
       service_id: labOrder.id,
@@ -103,6 +133,16 @@ export default function NewBillingPage() {
     const updated = [...items, newItem]
     setItems(updated)
     recalculatePaid(updated)
+
+    // Update DB billed status
+    try {
+      await supabase
+        .from('lab_orders')
+        .update({ billed: true, updated_at: new Date().toISOString() })
+        .eq('id', labOrder.id)
+    } catch (e) {
+      console.warn('Error updating lab_orders DB billed state:', e)
+    }
 
     // Mark lab order as billed locally
     const saved = localStorage.getItem('mithra_lab_orders')
