@@ -176,14 +176,14 @@ export default function DashboardPage() {
         .limit(5)
 
       setStats({
-        todayAppointments: aptCount || 8,
-        todayPatients: patCount || 10,
-        todayRevenue: totalRev > 0 ? totalRev : 4850,
-        todayPharmacySales: pharmacyTotal > 0 ? pharmacyTotal : 2340,
-        lowStockCount: lowCount > 0 ? lowCount : 1,
-        expiringCount: expCount > 0 ? expCount : 1,
+        todayAppointments: aptCount || 0,
+        todayPatients: patCount || 0,
+        todayRevenue: totalRev,
+        todayPharmacySales: pharmacyTotal,
+        lowStockCount: lowCount,
+        expiringCount: expCount,
         pendingPaymentsCount: pendingCount || 0,
-        todayPrescriptions: prescCount || 4,
+        todayPrescriptions: prescCount || 0,
       })
 
       setTodayAppointmentsList(apts || [])
@@ -193,10 +193,10 @@ export default function DashboardPage() {
 
       // Generate 7-day revenue trend
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      const chartData = days.map((day, idx) => ({
+      const chartData = days.map((day) => ({
         day,
-        hospital: 2000 + (idx * 450) + (Math.sin(idx) * 600),
-        pharmacy: 1200 + (idx * 300) + (Math.cos(idx) * 400),
+        hospital: (totalRev > 0) ? Math.round((totalRev / 7) * 100) / 100 : 0,
+        pharmacy: (pharmacyTotal > 0) ? Math.round((pharmacyTotal / 7) * 100) / 100 : 0,
       }))
       setRevenueChartData(chartData)
 
